@@ -6,9 +6,6 @@
 
 std::vector<std::vector<char>> parseStack(std::vector<std::string> input)
 {
-  // for (auto line : input)
-  //   std::cout << line << "\n";
-
   input.pop_back();
   std::vector<std::vector<char>> output;
   output.resize((input[0].size() + 1) / 4);
