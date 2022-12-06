@@ -1,17 +1,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <tuple>
 #include <vector>
+#include <algorithm>
 
 std::vector<std::vector<char>> parseStack(std::vector<std::string> input)
 {
+  // for (auto line : input)
+  //   std::cout << line << "\n";
+
   input.pop_back();
   std::vector<std::vector<char>> output;
   output.resize((input[0].size() + 1) / 4);
 
-  for (auto line : input)
+  for (auto lineit = input.rbegin(); lineit != input.rend(); ++lineit)
   {
+    auto line = *lineit;
     for (int i = 1, j = 0; i < line.size(); i += 4, j++)
     {
       char crate = line.at(i);
@@ -22,34 +26,41 @@ std::vector<std::vector<char>> parseStack(std::vector<std::string> input)
   return output;
 }
 
-std::vector<std::tuple<int, int, int>> parseInstruction(std::vector<std::string> input)
+struct instruction
 {
-  std::vector<std::tuple<int, int, int>> output;
-  for (auto line : input)
+  instruction(std::string text)
   {
-    
-    std::cout << line << '\n';
+    auto rem = std::remove(text.begin(), text.end(), '\r');
+    text.erase(rem, text.end());
+
+    int offset = text.size() - 18;
+
+    from = std::stoi(text.substr(12 + offset, 1), nullptr) - 1;
+    to = std::stoi(text.substr(17 + offset, 1), nullptr) - 1;
+    numberToMove = std::stoi(text.substr(5, 1 + offset), nullptr);
   }
-  return output;
+  int numberToMove;
+  int from;
+  int to;
+};
+
+void parseInstruction(std::string instruct, std::vector<std::vector<char>> &stack)
+{
+  instruction inst(instruct);
+  for (int i = 0; i < inst.numberToMove; i++)
+  {
+    stack[inst.to].push_back(stack[inst.from].back());
+    stack[inst.from].pop_back();
+  }
 }
 
-int containsEachOther(std::string cleaningSections)
+void parseInstructionBonus(std::string instruct, std::vector<std::vector<char>> &stack)
 {
-  std::string e1 = cleaningSections.substr(0, cleaningSections.find(","));
-  std::string e2 = cleaningSections.substr(cleaningSections.find(",") + 1);
-
-  int e1Low{std::stoi(e1.substr(0, e1.find("-")), nullptr)};
-  int e1High{std::stoi(e1.substr(e1.find("-") + 1), nullptr)};
-  int e2Low{std::stoi(e2.substr(0, e2.find("-")), nullptr)};
-  int e2High{std::stoi(e2.substr(e2.find("-") + 1), nullptr)};
-
-  if ((e1Low <= e2Low) && (e1High >= e2High))
-    return 1;
-
-  if ((e1Low >= e2Low) && (e1High <= e2High))
-    return 1;
-
-  return 0;
+  instruction inst(instruct);
+  int firstIter = stack[inst.from].size() - inst.numberToMove;
+  for (int i = 0; i < inst.numberToMove; i++)
+    stack[inst.to].push_back(stack[inst.from][firstIter + i]);
+  stack[inst.from].resize(firstIter);
 }
 
 void challenge(std::string path)
@@ -60,23 +71,22 @@ void challenge(std::string path)
   std::vector<std::string> stackInput;
   std::vector<std::vector<char>> stack;
 
-  std::vector<std::string> instructionInput;
-  std::vector<std::tuple<int, int, int>> instruction;
-
   while (std::getline(inputFile, inputText))
   {
-    if (inputText.size() <= 0)
-      continue;
-    if (inputText.at(0) == 'm')
-      instructionInput.push_back(inputText);
-    else
-      stackInput.push_back(inputText);
+    if (inputText.size() <= 2)
+      break;
+    stackInput.push_back(inputText);
   }
+  stack = parseStack(stackInput);
 
-  //stack = parseStack(stackInput);
-  instruction = parseInstruction(instructionInput);
+  while (std::getline(inputFile, inputText))
+    parseInstruction(inputText, stack);
 
-  std::cout << "Challenge: " << /*score <<*/ "\n";
+  std::cout << "Challenge: ";
+  for (auto pile : stack)
+    std::cout << pile.back();
+  std::cout << '\n';
+
   inputFile.close();
 }
 
@@ -85,19 +95,32 @@ void bonus(std::string path)
   std::string inputText = "";
   std::ifstream inputFile(path);
 
-  int score = 0;
+  std::vector<std::string> stackInput;
+  std::vector<std::vector<char>> stack;
 
   while (std::getline(inputFile, inputText))
-    inputText = inputText;
+  {
+    if (inputText.size() <= 2)
+      break;
+    stackInput.push_back(inputText);
+  }
+  stack = parseStack(stackInput);
 
-  std::cout << "Challenge: " << score << "\n";
+  while (std::getline(inputFile, inputText))
+    parseInstructionBonus(inputText, stack);
+
+  std::cout << "Bonus: ";
+  for (auto pile : stack)
+    std::cout << pile.back();
+  std::cout << '\n';
+
   inputFile.close();
 }
 
 int main()
 {
-  std::string file = "toyinput.txt";
+  std::string file = "input.txt";
   challenge(file);
-  // bonus(file);
+  bonus(file);
   return 0;
 }
